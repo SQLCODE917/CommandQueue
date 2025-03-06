@@ -24,7 +24,7 @@ class API {
       1: "word1",
       2: "word2"
     }
-    return corpus[id]  
+    return corpus[id]
   }
 }
 
@@ -73,12 +73,12 @@ function seq (first, next) {
   }
 }
 
-first = (input, next, failure) => { 
+first = (input, next, failure) => {
   console.log("First, this foot")
-  next(1) 
+  next(1)
 }
 
-second = (input, next, failure) => { 
+second = (input, next, failure) => {
   console.log("Then, the other foot")
   next(2)
 }
@@ -226,6 +226,69 @@ function chain (promises) {
 chain(promises)
 ```
 
-This needs to be reflected upon
+Can I rewrite AsynchronousOperations and M as a single `.reduce`?
 
-TODO: can I rewrite AsynchronousOperations and M as a single `.reduce`?
+Yes, I can:
+
+```
+class Env {
+  constructor(base) {
+    if (base) {
+      this.base = base;
+      this.symbols = Object.create(base.symbols);
+    } else {
+      this.symbols = {};
+    }
+  }
+
+  define(name, value) {
+    this.symbols[`E_${name}`] = value;
+  }
+
+  resolve(name) {
+    return this.symbols[`E_${name}`];
+  }
+
+  subenv() {
+    return new Env(this);
+  }
+}
+
+async function first(env) {
+  console.log("First");
+  console.log(env.resolve("precondition"));
+  env.define("First", "1st");
+  return env;
+}
+
+async function second(env) {
+  console.log("Second");
+  console.log(env.resolve("precondition"));
+  console.log(env.resolve("First"));
+  env.define("Second", "2nd");
+  return env;
+}
+
+async function third(env) {
+  console.log("Third");
+  console.log(env.resolve("precondition"));
+  console.log(env.resolve("First"));
+  console.log(env.resolve("Second"));
+  env.define("Third", "3rd");
+  return env;
+}
+
+function run(promises, env) {
+  promises.reduce((prevPromise, fn) => {
+    return prevPromise.then(fn);
+  }, Promise.resolve(env))
+  .then(() => console.log("SUCCESS!"))
+  .catch(() => console.log("ERROR!"));
+}
+
+const promises = [first, second, third];
+const env = new Env();
+env.define("precondition", "set");
+
+run(promises, env);
+```
